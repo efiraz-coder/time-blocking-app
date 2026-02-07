@@ -24,7 +24,7 @@ import { addWeeks, formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils
 
 export default function DashboardPage() {
   const [weekStart, setWeekStart] = useState<Date>(getCurrentWeekStart);
-  const [reportedDays] = useState(3);
+  const [reportedDays] = useState(0);
   const totalDays = 5;
   const weekRange = formatWeekRange(weekStart);
   const progressPercent = (reportedDays / totalDays) * 100;
@@ -36,8 +36,8 @@ export default function DashboardPage() {
       title: "תכנון שבועי (א-ה)",
       href: "/plan",
       icon: Calendar,
-      status: "ready" as const,
-      statusText: "מוכן ✓",
+      status: null,
+      statusText: "",
       gradient: "from-blue-50 to-indigo-50",
       iconColor: "text-blue-500",
     },
@@ -45,8 +45,8 @@ export default function DashboardPage() {
       title: "דיווח יומי",
       href: "/report/0",
       icon: FileText,
-      status: "missing" as const,
-      statusText: `חסר ${totalDays - reportedDays} ימים ⏳`,
+      status: null,
+      statusText: "",
       gradient: "from-amber-50 to-orange-50",
       iconColor: "text-amber-500",
     },
@@ -54,8 +54,8 @@ export default function DashboardPage() {
       title: "סיכום שבועי",
       href: "/summary",
       icon: PieChart,
-      status: "ready" as const,
-      statusText: "מוכן ✓",
+      status: null,
+      statusText: "",
       gradient: "from-emerald-50 to-teal-50",
       iconColor: "text-emerald-500",
     },
@@ -63,8 +63,8 @@ export default function DashboardPage() {
       title: "היסטוריה שבועית",
       href: "/history",
       icon: History,
-      status: "partial" as const,
-      statusText: "5 שבועות ⏳",
+      status: null,
+      statusText: "",
       gradient: "from-purple-50 to-violet-50",
       iconColor: "text-purple-500",
     },
@@ -73,7 +73,7 @@ export default function DashboardPage() {
       href: "#",
       icon: Zap,
       status: null,
-      statusText: "העתק משבוע שעבר",
+      statusText: "",
       gradient: "from-rose-50 to-pink-50",
       iconColor: "text-rose-500",
     },
