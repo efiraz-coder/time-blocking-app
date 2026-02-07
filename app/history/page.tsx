@@ -6,7 +6,6 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
   Category,
   CATEGORY_COLORS,
-  CATEGORY_BG,
   CATEGORY_LABELS,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
