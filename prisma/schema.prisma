@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String     @id @default(cuid())
+  name      String?
+  email     String?    @unique
+  weeks     WeekPlan[]
+  createdAt DateTime   @default(now())
+}
+
+model WeekPlan {
+  id            String       @id @default(cuid())
+  weekStartDate DateTime
+  userId        String?
+  user          User?        @relation(fields: [userId], references: [id])
+  plannedDays   PlannedDay[]
+  actualDays    ActualDay[]
+  createdAt     DateTime     @default(now())
+  updatedAt     DateTime     @updatedAt
+
+  @@unique([weekStartDate, userId])
+  @@index([userId])
+}
+
+model PlannedDay {
+  id         String      @id @default(cuid())
+  dayOfWeek  Int         // 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday
+  weekPlanId String
+  weekPlan   WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  blocks     TimeBlock[] @relation("PlannedBlocks")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([weekPlanId, dayOfWeek])
+  @@index([weekPlanId])
+}
+
+model ActualDay {
+  id         String      @id @default(cuid())
+  dayOfWeek  Int         // 0=Sunday, 1=Monday, 2=Tuesday, 3=Wednesday, 4=Thursday
+  weekPlanId String
+  weekPlan   WeekPlan    @relation(fields: [weekPlanId], references: [id], onDelete: Cascade)
+  blocks     TimeBlock[] @relation("ActualBlocks")
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+
+  @@unique([weekPlanId, dayOfWeek])
+  @@index([weekPlanId])
+}
+
+model TimeBlock {
+  id           String      @id @default(cuid())
+  startHour    Int
+  endHour      Int
+  category     Category
+  note         String?
+  plannedDayId String?
+  plannedDay   PlannedDay? @relation("PlannedBlocks", fields: [plannedDayId], references: [id], onDelete: Cascade)
+  actualDayId  String?
+  actualDay    ActualDay?  @relation("ActualBlocks", fields: [actualDayId], references: [id], onDelete: Cascade)
+
+  @@index([plannedDayId])
+  @@index([actualDayId])
+}
+
+enum Category {
+  PERSONAL
+  FAMILY
+  HOUSEHOLD
+  RELATIONSHIP
+  PAID_WORK
+  UNPAID_WORK
+  EMPTY
+}
