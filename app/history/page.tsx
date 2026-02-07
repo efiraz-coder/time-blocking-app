@@ -1,6 +1,7 @@
 "use client";
 
 import AppShell from "@/components/AppShell";
+import AuthGuard from "@/components/AuthGuard";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import {
   Category,
@@ -20,6 +21,7 @@ const CATS: Category[] = ["PAID_WORK", "FAMILY", "PERSONAL", "HOUSEHOLD", "RELAT
 
 export default function HistoryPage() {
   return (
+    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
         <header className="mb-8">
@@ -130,5 +132,6 @@ export default function HistoryPage() {
         </div>
       </div>
     </AppShell>
+    </AuthGuard>
   );
 }

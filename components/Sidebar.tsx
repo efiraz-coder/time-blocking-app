@@ -12,9 +12,12 @@ import {
   ChevronRight,
   Timer,
   Menu,
-  X,
+    X,
+    LogOut,
+    User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/lib/auth-context";
 import { useState, useEffect } from "react";
 
 const navItems = [
@@ -27,6 +30,7 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
 
@@ -95,6 +99,36 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* User info + Logout */}
+      <div className="mx-3 mb-2 border-t border-border/30 pt-3">
+        {user && (
+          <div className={cn(
+            "flex items-center gap-2 px-3 py-2 mb-1",
+            collapsed && "justify-center"
+          )}>
+            <div className="w-7 h-7 rounded-full bg-purple-100 flex items-center justify-center shrink-0">
+              <User className="w-3.5 h-3.5 text-purple-600" />
+            </div>
+            {!collapsed && (
+              <span className="text-xs font-medium text-muted-foreground truncate animate-fade-in">
+                {user}
+              </span>
+            )}
+          </div>
+        )}
+        <button
+          onClick={logout}
+          className={cn(
+            "flex items-center gap-3 w-full px-3 py-2.5 rounded-2xl text-sm font-medium text-red-500 hover:bg-red-50 transition-apple",
+            collapsed && "justify-center"
+          )}
+          title={collapsed ? "התנתק" : undefined}
+        >
+          <LogOut className="w-5 h-5 shrink-0" />
+          {!collapsed && <span className="animate-fade-in">התנתק</span>}
+        </button>
+      </div>
 
       {/* Collapse toggle - desktop only */}
       <button

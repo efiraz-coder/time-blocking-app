@@ -13,6 +13,7 @@ import {
   Save,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import AuthGuard from "@/components/AuthGuard";
 import { cn } from "@/lib/utils";
 import { formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
 import {
@@ -140,6 +141,7 @@ export default function PlanPage() {
   const totalHours = summary.reduce((sum, s) => sum + s.hours, 0);
 
   return (
+    <AuthGuard>
     <AppShell>
       <div
         className="p-6 md:p-10 max-w-6xl mx-auto animate-fade-in"
@@ -349,5 +351,6 @@ export default function PlanPage() {
         </div>
       </div>
     </AppShell>
+    </AuthGuard>
   );
 }

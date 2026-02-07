@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Eraser, Save } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import AuthGuard from "@/components/AuthGuard";
 import { cn } from "@/lib/utils";
 import { getDateForDay, formatDay, getCurrentWeekStart } from "@/lib/date-utils";
 import {
@@ -61,6 +62,7 @@ export default function ReportDayPage({
   );
 
   return (
+    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -219,5 +221,6 @@ export default function ReportDayPage({
         </div>
       </div>
     </AppShell>
+    </AuthGuard>
   );
 }

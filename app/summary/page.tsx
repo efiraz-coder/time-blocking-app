@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import AppShell from "@/components/AppShell";
+import AuthGuard from "@/components/AuthGuard";
 import { formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
 import {
   Category,
@@ -50,6 +51,7 @@ export default function SummaryPage() {
   }));
 
   return (
+    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
         <header className="mb-8">
@@ -175,5 +177,6 @@ export default function SummaryPage() {
         </div>
       </div>
     </AppShell>
+    </AuthGuard>
   );
 }

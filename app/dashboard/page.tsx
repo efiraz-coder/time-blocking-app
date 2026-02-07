@@ -18,6 +18,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
+import AuthGuard from "@/components/AuthGuard";
 import { cn } from "@/lib/utils";
 import { addWeeks, formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
 
@@ -79,6 +80,7 @@ export default function DashboardPage() {
   ];
 
   return (
+    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
         {/* Header */}
@@ -250,5 +252,6 @@ export default function DashboardPage() {
         </div>
       </div>
     </AppShell>
+    </AuthGuard>
   );
 }
