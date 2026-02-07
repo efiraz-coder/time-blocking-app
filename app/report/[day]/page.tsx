@@ -253,7 +253,6 @@ export default function ReportDayPage({
               {HOURS.map((hour) => {
                 const plannedCat = planned[hour] ?? "EMPTY";
                 const actualCat = actual[hour] ?? "EMPTY";
-                const match = plannedCat === actualCat;
                 return (
                   <div key={hour} className="grid grid-cols-[60px_1fr_1fr] border-t border-border/20">
                     <div className="px-3 py-1 text-[11px] text-muted-foreground font-medium flex items-center justify-center bg-accent/20">
