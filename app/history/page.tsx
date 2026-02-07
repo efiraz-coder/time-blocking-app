@@ -24,7 +24,7 @@ export default function HistoryPage() {
     <AppShell>
       <div className="p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">היסטוריה שבועית</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">היסטוריה שבועית</h1>
           <p className="text-muted-foreground mt-1">מעקב מגמות לאורך זמן</p>
         </header>
 

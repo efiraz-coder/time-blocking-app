@@ -67,7 +67,7 @@ export default function ReportDayPage({
       <div className="p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">דיווח יומי</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">דיווח יומי</h1>
             <p className="text-muted-foreground mt-1">{dayLabel} &middot; תכנון מול ביצוע</p>
           </div>
           {hasChanges && (

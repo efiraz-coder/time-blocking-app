@@ -58,7 +58,7 @@ export default function LoginPage() {
           <div className="inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-white/20 backdrop-blur-xl mb-4 shadow-lg">
             <Clock className="w-10 h-10 text-white" />
           </div>
-          <h1 className="text-3xl font-bold text-white drop-shadow-sm">
+          <h1 className="text-2xl md:text-3xl font-bold text-white drop-shadow-sm">
             תכנון זמן שבועי
           </h1>
           <p className="text-white/70 mt-2 text-sm">
@@ -67,7 +67,7 @@ export default function LoginPage() {
         </div>
 
         {/* Login Card */}
-        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-8 border border-white/20">
+        <div className="bg-white/95 backdrop-blur-xl rounded-3xl shadow-2xl p-6 md:p-8 border border-white/20">
           {/* Security Warning */}
           <div className="mb-6 p-4 rounded-2xl bg-amber-50 border border-amber-200/60 flex gap-3">
             <AlertTriangle className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />

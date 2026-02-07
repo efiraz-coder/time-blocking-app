@@ -150,7 +150,7 @@ export default function PlanPage() {
       >
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">תכנון שבועי</h1>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">תכנון שבועי</h1>
             <p className="text-muted-foreground mt-1">
               שבוע {weekRange} &middot; לחיצה = צבע, דאבל-קליק = כתיבה
             </p>
@@ -261,7 +261,7 @@ export default function PlanPage() {
           <div className="flex-1 order-1 xl:order-2">
             <div className="rounded-3xl bg-white shadow-apple overflow-hidden select-none">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[600px]">
+                <table className="w-full border-collapse min-w-[500px]">
                   <thead>
                     <tr>
                       <th className="p-3 w-20 text-xs font-semibold text-muted-foreground bg-accent/50" />

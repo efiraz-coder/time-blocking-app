@@ -86,7 +86,7 @@ export default function DashboardPage() {
         {/* Header */}
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight text-foreground">
               תכנון זמן שבועי
             </h1>
             <p className="text-muted-foreground mt-1">שבוע {weekRange}</p>
@@ -94,7 +94,7 @@ export default function DashboardPage() {
           <div className="flex items-center gap-2">
             <button
               onClick={() => setWeekStart((w) => addWeeks(w, -1))}
-              className="p-2.5 rounded-2xl bg-white shadow-apple hover:shadow-apple-hover transition-apple text-muted-foreground hover:text-foreground"
+              className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-2xl bg-white shadow-apple hover:shadow-apple-hover transition-apple text-muted-foreground hover:text-foreground"
               aria-label="שבוע קודם"
             >
               <ChevronRight className="w-5 h-5" />
@@ -107,7 +107,7 @@ export default function DashboardPage() {
             </button>
             <button
               onClick={() => setWeekStart((w) => addWeeks(w, 1))}
-              className="p-2.5 rounded-2xl bg-white shadow-apple hover:shadow-apple-hover transition-apple text-muted-foreground hover:text-foreground"
+              className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-2xl bg-white shadow-apple hover:shadow-apple-hover transition-apple text-muted-foreground hover:text-foreground"
               aria-label="שבוע הבא"
             >
               <ChevronLeft className="w-5 h-5" />
@@ -159,7 +159,7 @@ export default function DashboardPage() {
 
         {/* Main Green CTA Card */}
         <Link href="/plan" className="block mb-8 group">
-          <div className="relative h-[200px] rounded-3xl bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 shadow-apple-lg hover:shadow-apple-hover transition-apple overflow-hidden flex items-center justify-center cursor-pointer group-hover:scale-[1.01] duration-300">
+          <div className="relative h-[150px] md:h-[200px] rounded-3xl bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 shadow-apple-lg hover:shadow-apple-hover transition-apple overflow-hidden flex items-center justify-center cursor-pointer group-hover:scale-[1.01] duration-300">
             <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-white/10" />
             <div className="absolute -bottom-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
             <div className="absolute top-4 right-8 w-16 h-16 rounded-full bg-white/5" />

@@ -55,7 +55,7 @@ export default function SummaryPage() {
     <AppShell>
       <div className="p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
         <header className="mb-8">
-          <h1 className="text-3xl font-bold tracking-tight">סיכום שבועי</h1>
+          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">סיכום שבועי</h1>
           <p className="text-muted-foreground mt-1">שבוע {weekRange}</p>
         </header>
 
@@ -144,7 +144,7 @@ export default function SummaryPage() {
         {/* Chart */}
         <div className="rounded-3xl bg-white shadow-apple p-6 animate-slide-up" style={{ animationDelay: "400ms" }}>
           <h3 className="text-lg font-bold mb-6">גרף השוואתי</h3>
-          <div className="h-80">
+          <div className="h-64 md:h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={chartData}

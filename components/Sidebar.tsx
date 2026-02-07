@@ -63,7 +63,7 @@ export default function Sidebar() {
         {/* Mobile close button */}
         <button
           onClick={() => setMobileOpen(false)}
-          className="lg:hidden mr-auto p-1 rounded-lg hover:bg-accent transition-apple"
+          className="lg:hidden mr-auto p-2.5 rounded-lg hover:bg-accent transition-apple min-h-[44px] min-w-[44px] flex items-center justify-center"
           aria-label="סגור תפריט"
         >
           <X className="w-5 h-5 text-muted-foreground" />
@@ -81,7 +81,7 @@ export default function Sidebar() {
               key={item.href}
               href={item.href}
               className={cn(
-                "flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium transition-apple group",
+                "flex items-center gap-3 px-3 py-3 rounded-2xl text-sm font-medium transition-apple group min-h-[44px]",
                 isActive
                   ? "bg-primary/10 text-primary shadow-sm"
                   : "text-muted-foreground hover:bg-accent hover:text-foreground"
@@ -164,7 +164,7 @@ export default function Sidebar() {
       {/* Mobile sidebar */}
       <aside
         className={cn(
-          "lg:hidden fixed top-0 right-0 h-screen w-[260px] bg-white/95 glass border-l border-border/50 flex flex-col z-50 transition-transform duration-300 ease-in-out",
+          "lg:hidden fixed top-0 right-0 h-screen w-[280px] max-w-[85vw] bg-white/95 glass border-l border-border/50 flex flex-col z-50 transition-transform duration-300 ease-in-out",
           mobileOpen ? "translate-x-0" : "translate-x-full"
         )}
       >
