@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Eraser, Save } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -29,37 +29,127 @@ export default function ReportDayPage({
   const dayDate = getDateForDay(weekStart, dayOfWeek);
   const dayLabel = formatDay(dayDate);
 
-  const [planned] = useState<Record<number, Category>>(() => {
+  // Start empty - no example data
+  const [planned, setPlanned] = useState<Record<number, Category>>(() => {
     const state: Record<number, Category> = {};
     HOURS.forEach((h) => (state[h] = "EMPTY"));
-    state[8] = "PAID_WORK";
-    state[9] = "PAID_WORK";
-    state[10] = "PAID_WORK";
-    state[11] = "PERSONAL";
-    state[14] = "PAID_WORK";
-    state[15] = "PAID_WORK";
-    state[16] = "FAMILY";
-    state[17] = "FAMILY";
     return state;
   });
 
   const [actual, setActual] = useState<Record<number, Category>>(() => {
     const state: Record<number, Category> = {};
-    HOURS.forEach((h) => (state[h] = planned[h] as Category));
-    state[11] = "PAID_WORK";
-    state[14] = "PERSONAL";
+    HOURS.forEach((h) => (state[h] = "EMPTY"));
     return state;
   });
 
-  const [selectedCategory, setSelectedCategory] = useState<Category>("PAID_WORK");
+  // Notes for both planned and actual
+  const [plannedNotes, setPlannedNotes] = useState<Record<number, string>>({});
+  const [actualNotes, setActualNotes] = useState<Record<number, string>>({});
 
-  const handleActualClick = useCallback(
-    (hour: number) => {
-      setActual((prev) => ({ ...prev, [hour]: selectedCategory }));
+  // Editing state: "planned-8" or "actual-14"
+  const [editingCell, setEditingCell] = useState<string | null>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const [selectedCategory, setSelectedCategory] = useState<Category>("PAID_WORK");
+  // Which column is being painted: "planned" or "actual"
+  const [activeColumn, setActiveColumn] = useState<"planned" | "actual">("actual");
+
+  useEffect(() => {
+    if (editingCell && inputRef.current) {
+      inputRef.current.focus();
+    }
+  }, [editingCell]);
+
+  const handleCellClick = useCallback(
+    (column: "planned" | "actual", hour: number) => {
+      if (editingCell) return; // don't change category while editing text
+      if (column === "planned") {
+        setPlanned((prev) => ({ ...prev, [hour]: selectedCategory }));
+      } else {
+        setActual((prev) => ({ ...prev, [hour]: selectedCategory }));
+      }
       setHasChanges(true);
     },
-    [selectedCategory]
+    [selectedCategory, editingCell]
   );
+
+  const handleDoubleClick = (column: "planned" | "actual", hour: number) => {
+    setEditingCell(`${column}-${hour}`);
+  };
+
+  const handleNoteSubmit = (column: "planned" | "actual", hour: number, value: string) => {
+    if (column === "planned") {
+      setPlannedNotes((prev) => ({ ...prev, [hour]: value }));
+    } else {
+      setActualNotes((prev) => ({ ...prev, [hour]: value }));
+    }
+    setEditingCell(null);
+    if (value.trim()) setHasChanges(true);
+  };
+
+  const handleNoteKeyDown = (e: React.KeyboardEvent<HTMLInputElement>, column: "planned" | "actual", hour: number) => {
+    if (e.key === "Enter") {
+      handleNoteSubmit(column, hour, (e.target as HTMLInputElement).value);
+    } else if (e.key === "Escape") {
+      setEditingCell(null);
+    }
+  };
+
+  const renderCell = (column: "planned" | "actual", hour: number) => {
+    const cat = column === "planned" ? planned[hour] : actual[hour];
+    const notes = column === "planned" ? plannedNotes : actualNotes;
+    const note = notes[hour] || "";
+    const cellKey = `${column}-${hour}`;
+    const isEditing = editingCell === cellKey;
+
+    if (isEditing) {
+      return (
+        <input
+          ref={inputRef}
+          type="text"
+          defaultValue={note}
+          onBlur={(e) => handleNoteSubmit(column, hour, e.target.value)}
+          onKeyDown={(e) => handleNoteKeyDown(e, column, hour)}
+          className="w-full h-11 rounded-xl border-2 border-primary/50 px-2 text-xs text-center focus:outline-none focus:ring-2 focus:ring-primary/30 bg-white"
+          placeholder="כתוב כאן..."
+          dir="rtl"
+        />
+      );
+    }
+
+    const isEmpty = cat === "EMPTY";
+    const isActual = column === "actual";
+
+    return (
+      <button
+        type="button"
+        className={cn(
+          "w-full h-11 rounded-xl flex items-center justify-center text-xs font-medium transition-apple relative",
+          isEmpty && "bg-gray-50/80 hover:bg-gray-100",
+          isActual && !isEmpty && "hover:scale-105 hover:shadow-md",
+          !isActual && !isEmpty && "hover:scale-105 hover:shadow-md"
+        )}
+        style={
+          !isEmpty
+            ? isActual
+              ? { backgroundColor: CATEGORY_BG[cat], color: CATEGORY_COLORS[cat] }
+              : { backgroundColor: CATEGORY_COLORS[cat], color: "#fff", opacity: 0.85 }
+            : undefined
+        }
+        onClick={() => handleCellClick(column, hour)}
+        onDoubleClick={() => handleDoubleClick(column, hour)}
+        title={`${hour}:00-${hour + 1}:00 ${CATEGORY_LABELS[cat]}${note ? ` - ${note}` : ""} | דאבל-קליק לכתיבה`}
+      >
+        {note ? (
+          <span className="truncate px-1">{note}</span>
+        ) : !isEmpty ? (
+          CATEGORY_LABELS[cat]
+        ) : (
+          "—"
+        )}
+      </button>
+    );
+  };
 
   return (
     <AuthGuard>
@@ -68,7 +158,7 @@ export default function ReportDayPage({
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">דיווח יומי</h1>
-            <p className="text-muted-foreground mt-1">{dayLabel} &middot; תכנון מול ביצוע</p>
+            <p className="text-muted-foreground mt-1">{dayLabel} &middot; לחיצה = צבע, דאבל-קליק = כתיבה</p>
           </div>
           {hasChanges && (
             <button
@@ -88,7 +178,7 @@ export default function ReportDayPage({
               key={d}
               href={`/report/${d}`}
               className={cn(
-                "px-4 py-2 rounded-2xl text-sm font-medium transition-apple",
+                "px-4 py-2 rounded-2xl text-sm font-medium transition-apple min-h-[44px] flex items-center",
                 d === dayOfWeek
                   ? "bg-primary text-white shadow-apple"
                   : "bg-white text-muted-foreground shadow-apple hover:shadow-apple-hover hover:text-foreground"
@@ -99,6 +189,33 @@ export default function ReportDayPage({
           ))}
         </div>
 
+        {/* Column Selector */}
+        <div className="mb-4 flex gap-2 p-3 rounded-2xl bg-white shadow-apple">
+          <span className="text-xs text-muted-foreground flex items-center ml-2">עמודה פעילה:</span>
+          <button
+            onClick={() => setActiveColumn("planned")}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-semibold transition-apple",
+              activeColumn === "planned"
+                ? "bg-foreground/80 text-white shadow-sm"
+                : "bg-gray-100 text-muted-foreground hover:bg-gray-200"
+            )}
+          >
+            תכנון
+          </button>
+          <button
+            onClick={() => setActiveColumn("actual")}
+            className={cn(
+              "px-4 py-2 rounded-xl text-xs font-semibold transition-apple",
+              activeColumn === "actual"
+                ? "bg-primary/80 text-white shadow-sm"
+                : "bg-gray-100 text-muted-foreground hover:bg-gray-200"
+            )}
+          >
+            ביצוע
+          </button>
+        </div>
+
         {/* Legend */}
         <div className="mb-6 flex gap-4 p-4 rounded-2xl bg-white shadow-apple">
           <div className="flex items-center gap-2 text-sm">
@@ -107,7 +224,10 @@ export default function ReportDayPage({
           </div>
           <div className="flex items-center gap-2 text-sm">
             <span className="w-4 h-4 rounded-lg bg-primary/60" />
-            <span className="text-muted-foreground">ביצוע (לחץ לשינוי)</span>
+            <span className="text-muted-foreground">ביצוע</span>
+          </div>
+          <div className="flex items-center gap-2 text-xs text-muted-foreground mr-auto">
+            💡 דאבל-קליק לכתיבה בבלוק
           </div>
         </div>
 
@@ -116,8 +236,18 @@ export default function ReportDayPage({
             <div className="rounded-3xl bg-white shadow-apple overflow-hidden">
               <div className="grid grid-cols-[60px_1fr_1fr] text-center">
                 <div className="p-3 bg-accent/50 text-xs font-semibold text-muted-foreground">שעה</div>
-                <div className="p-3 bg-accent/50 text-xs font-semibold text-muted-foreground">תכנון</div>
-                <div className="p-3 bg-accent/50 text-xs font-semibold text-muted-foreground">ביצוע</div>
+                <div className={cn(
+                  "p-3 text-xs font-semibold cursor-pointer transition-apple",
+                  activeColumn === "planned" ? "bg-foreground/10 text-foreground" : "bg-accent/50 text-muted-foreground"
+                )} onClick={() => setActiveColumn("planned")}>
+                  תכנון {activeColumn === "planned" && "✏️"}
+                </div>
+                <div className={cn(
+                  "p-3 text-xs font-semibold cursor-pointer transition-apple",
+                  activeColumn === "actual" ? "bg-primary/10 text-primary" : "bg-accent/50 text-muted-foreground"
+                )} onClick={() => setActiveColumn("actual")}>
+                  ביצוע {activeColumn === "actual" && "✏️"}
+                </div>
               </div>
 
               {HOURS.map((hour) => {
@@ -129,41 +259,11 @@ export default function ReportDayPage({
                     <div className="px-3 py-1 text-[11px] text-muted-foreground font-medium flex items-center justify-center bg-accent/20">
                       {String(hour).padStart(2, "0")}:00
                     </div>
-                    <div className="p-1">
-                      <div
-                        className={cn(
-                          "h-11 rounded-xl flex items-center justify-center text-xs font-medium transition-apple",
-                          plannedCat === "EMPTY" && "bg-gray-50/50"
-                        )}
-                        style={
-                          plannedCat !== "EMPTY"
-                            ? { backgroundColor: CATEGORY_COLORS[plannedCat], color: "#fff", opacity: 0.85 }
-                            : undefined
-                        }
-                        title={`${hour}:00-${hour + 1}:00 ${CATEGORY_LABELS[plannedCat]} (תכנון)`}
-                      >
-                        {plannedCat !== "EMPTY" && CATEGORY_LABELS[plannedCat]}
-                      </div>
+                    <div className={cn("p-1", activeColumn === "planned" && "bg-foreground/[0.02]")}>
+                      {renderCell("planned", hour)}
                     </div>
-                    <div className="p-1">
-                      <button
-                        type="button"
-                        className={cn(
-                          "w-full h-11 rounded-xl flex items-center justify-center text-xs font-medium transition-apple hover:scale-105 hover:shadow-md",
-                          actualCat === "EMPTY" && "bg-gray-50/80 hover:bg-gray-100",
-                          !match && actualCat !== "EMPTY" && "ring-2 ring-amber-300/50"
-                        )}
-                        style={
-                          actualCat !== "EMPTY"
-                            ? { backgroundColor: CATEGORY_BG[actualCat], color: CATEGORY_COLORS[actualCat] }
-                            : undefined
-                        }
-                        onClick={() => handleActualClick(hour)}
-                        title={`${hour}:00-${hour + 1}:00 ${CATEGORY_LABELS[actualCat]} - לחץ לשינוי`}
-                      >
-                        {actualCat !== "EMPTY" ? CATEGORY_LABELS[actualCat] : "—"}
-                        {!match && actualCat !== "EMPTY" && <span className="mr-1 text-[10px]">⚡</span>}
-                      </button>
+                    <div className={cn("p-1", activeColumn === "actual" && "bg-primary/[0.02]")}>
+                      {renderCell("actual", hour)}
                     </div>
                   </div>
                 );
@@ -174,14 +274,16 @@ export default function ReportDayPage({
           {/* Category Picker */}
           <div className="w-full lg:w-52 shrink-0">
             <div className="sticky top-6 rounded-3xl bg-white shadow-apple p-5">
-              <h3 className="text-sm font-bold mb-3 text-foreground/80">סמן ביצוע</h3>
+              <h3 className="text-sm font-bold mb-3 text-foreground/80">
+                סמן {activeColumn === "planned" ? "תכנון" : "ביצוע"}
+              </h3>
               <div className="space-y-2">
                 {ALL_CATEGORIES.map((cat) => (
                   <button
                     key={cat}
                     onClick={() => setSelectedCategory(cat)}
                     className={cn(
-                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-medium transition-apple",
+                      "w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-medium transition-apple min-h-[44px]",
                       selectedCategory === cat ? "shadow-sm" : "hover:bg-accent"
                     )}
                     style={{
@@ -204,7 +306,7 @@ export default function ReportDayPage({
                 <button
                   onClick={() => setSelectedCategory("EMPTY")}
                   className={cn(
-                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-medium transition-apple",
+                    "w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-xs font-medium transition-apple min-h-[44px]",
                     selectedCategory === "EMPTY"
                       ? "bg-gray-100 shadow-sm outline outline-2 outline-offset-1 outline-gray-400"
                       : "hover:bg-accent"
