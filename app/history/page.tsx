@@ -29,11 +29,17 @@ function computeWeekHours(weekData: WeekData): Record<string, number> {
     }
   }
 
-  // Also count from reports (actual takes priority if exists)
+  // Count from reports (actual data)
   for (const [, report] of Object.entries(weekData.reports)) {
     for (const [, cat] of Object.entries(report.actual)) {
       if (cat && cat !== "EMPTY") {
-        // Use actual data (we may want both, but for history overview we show actual if available)
+        hours[cat] = (hours[cat] ?? 0) + 1;
+      }
+    }
+    // Also count planned from reports if grid is empty
+    for (const [, cat] of Object.entries(report.planned)) {
+      if (cat && cat !== "EMPTY") {
+        hours[cat] = (hours[cat] ?? 0) + 1;
       }
     }
   }

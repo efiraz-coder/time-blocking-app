@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   User,
   Home,
@@ -18,7 +18,8 @@ import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { formatWeekRange } from "@/lib/date-utils";
-import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
+import WeekNavigator, { parseWeekParam } from "@/components/WeekNavigator";
+import { useSearchParams } from "next/navigation";
 import {
   Category,
   CATEGORY_COLORS,
@@ -44,7 +45,8 @@ const ICON_MAP: Record<Category, React.ComponentType<{ className?: string }>> = 
 
 function PlanContent() {
   const { user } = useAuth();
-  const weekStart = useWeekFromURL();
+  const searchParams = useSearchParams();
+  const [weekStart, setWeekStart] = useState<Date>(() => parseWeekParam(searchParams.get("week")));
   const [selectedCategory, setSelectedCategory] = useState<Category>("PAID_WORK");
   const [grid, setGrid] = useState<WeekGrid>({});
   const [notes, setNotes] = useState<WeekNotes>({});
@@ -189,7 +191,7 @@ function PlanContent() {
               {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
               {saved ? "נשמר!" : "שמור תכנון"}
             </button>
-            <WeekNavigator weekStart={weekStart} />
+            <WeekNavigator weekStart={weekStart} onWeekChange={setWeekStart} />
           </div>
         </header>
 
@@ -402,13 +404,7 @@ function PlanContent() {
 export default function PlanPage() {
   return (
     <AuthGuard>
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
-        </div>
-      }>
-        <PlanContent />
-      </Suspense>
+      <PlanContent />
     </AuthGuard>
   );
 }

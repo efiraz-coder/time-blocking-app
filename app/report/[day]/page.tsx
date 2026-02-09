@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, Suspense } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
 import { Eraser, Save, Check } from "lucide-react";
 import AppShell from "@/components/AppShell";
@@ -8,7 +8,7 @@ import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { getDateForDay, formatDay } from "@/lib/date-utils";
-import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
+import WeekNavigator, { parseWeekParam } from "@/components/WeekNavigator";
 import { useSearchParams } from "next/navigation";
 import {
   Category,
@@ -23,11 +23,15 @@ import {
 } from "@/lib/constants";
 import { loadDayReport, saveDayReport, DayReport } from "@/lib/storage";
 
+function toDateStr(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
 function ReportContent({ dayParam }: { dayParam: string }) {
   const { user } = useAuth();
-  const weekStart = useWeekFromURL();
   const searchParams = useSearchParams();
-  const weekQ = searchParams.get("week") ? `?week=${searchParams.get("week")}` : "";
+  const [weekStart, setWeekStart] = useState<Date>(() => parseWeekParam(searchParams.get("week")));
+  const weekQ = `?week=${toDateStr(weekStart)}`;
 
   const dayOfWeek = Math.max(0, Math.min(5, parseInt(dayParam, 10) || 0));
   const isFriday = dayOfWeek === 5;
@@ -223,7 +227,7 @@ function ReportContent({ dayParam }: { dayParam: string }) {
               {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
               {saved ? "נשמר!" : "שמור דיווח"}
             </button>
-            <WeekNavigator weekStart={weekStart} />
+            <WeekNavigator weekStart={weekStart} onWeekChange={setWeekStart} />
           </div>
         </header>
 
@@ -387,13 +391,7 @@ export default function ReportDayPage({
 }) {
   return (
     <AuthGuard>
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
-        </div>
-      }>
-        <ReportContent dayParam={params.day} />
-      </Suspense>
+      <ReportContent dayParam={params.day} />
     </AuthGuard>
   );
 }

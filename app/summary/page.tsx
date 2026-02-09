@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
 import { formatWeekRange } from "@/lib/date-utils";
-import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
+import WeekNavigator, { parseWeekParam } from "@/components/WeekNavigator";
+import { useSearchParams } from "next/navigation";
 import {
   Category,
   CATEGORY_COLORS,
@@ -36,7 +37,8 @@ type SummaryRow = {
 
 function SummaryContent() {
   const { user } = useAuth();
-  const weekStart = useWeekFromURL();
+  const searchParams = useSearchParams();
+  const [weekStart, setWeekStart] = useState<Date>(() => parseWeekParam(searchParams.get("week")));
   const [summaryData, setSummaryData] = useState<SummaryRow[]>([]);
 
   const weekRange = formatWeekRange(weekStart);
@@ -93,7 +95,7 @@ function SummaryContent() {
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">סיכום שבועי</h1>
             <p className="text-muted-foreground mt-1">שבוע {weekRange}</p>
           </div>
-          <WeekNavigator weekStart={weekStart} />
+          <WeekNavigator weekStart={weekStart} onWeekChange={setWeekStart} />
         </header>
 
         {isEmpty ? (
@@ -232,13 +234,7 @@ function SummaryContent() {
 export default function SummaryPage() {
   return (
     <AuthGuard>
-      <Suspense fallback={
-        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
-        </div>
-      }>
-        <SummaryContent />
-      </Suspense>
+      <SummaryContent />
     </AuthGuard>
   );
 }

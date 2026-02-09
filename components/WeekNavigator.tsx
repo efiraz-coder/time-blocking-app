@@ -2,53 +2,33 @@
 
 import { ChevronRight, ChevronLeft } from "lucide-react";
 import { addWeeks, getCurrentWeekStart, getWeekStart } from "@/lib/date-utils";
-import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo } from "react";
 
 function toDateStr(d: Date): string {
   return d.toISOString().split("T")[0];
 }
 
-export function useWeekFromURL(): Date {
-  const searchParams = useSearchParams();
-  const weekParam = searchParams.get("week");
-
-  return useMemo(() => {
-    if (weekParam) {
-      const parsed = new Date(weekParam + "T00:00:00");
-      if (!isNaN(parsed.getTime())) {
-        return getWeekStart(parsed);
-      }
-    }
-    return getCurrentWeekStart();
-  }, [weekParam]);
+interface WeekNavigatorProps {
+  weekStart: Date;
+  onWeekChange: (newWeek: Date) => void;
 }
 
-export default function WeekNavigator({ weekStart }: { weekStart: Date }) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
+export function parseWeekParam(param: string | null): Date {
+  if (param) {
+    const parsed = new Date(param + "T00:00:00");
+    if (!isNaN(parsed.getTime())) {
+      return getWeekStart(parsed);
+    }
+  }
+  return getCurrentWeekStart();
+}
+
+export default function WeekNavigator({ weekStart, onWeekChange }: WeekNavigatorProps) {
   const currentWeekStr = toDateStr(getCurrentWeekStart());
   const isCurrentWeek = toDateStr(weekStart) === currentWeekStr;
 
-  const navigateToWeek = useCallback(
-    (newWeek: Date) => {
-      const params = new URLSearchParams(searchParams.toString());
-      const weekStr = toDateStr(newWeek);
-      if (weekStr === currentWeekStr) {
-        params.delete("week");
-      } else {
-        params.set("week", weekStr);
-      }
-      const qs = params.toString();
-      const path = window.location.pathname;
-      router.push(qs ? `${path}?${qs}` : path);
-    },
-    [router, searchParams, currentWeekStr]
-  );
-
-  const goBack = useCallback(() => navigateToWeek(addWeeks(weekStart, -1)), [weekStart, navigateToWeek]);
-  const goForward = useCallback(() => navigateToWeek(addWeeks(weekStart, 1)), [weekStart, navigateToWeek]);
-  const goToday = useCallback(() => navigateToWeek(getCurrentWeekStart()), [navigateToWeek]);
+  const goBack = () => onWeekChange(addWeeks(weekStart, -1));
+  const goForward = () => onWeekChange(addWeeks(weekStart, 1));
+  const goToday = () => onWeekChange(getCurrentWeekStart());
 
   return (
     <div className="flex items-center gap-2">
