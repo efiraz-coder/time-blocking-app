@@ -1,13 +1,15 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { Eraser, Save, Check } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
-import { getDateForDay, formatDay, getCurrentWeekStart } from "@/lib/date-utils";
+import { getDateForDay, formatDay } from "@/lib/date-utils";
+import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
+import { useSearchParams } from "next/navigation";
 import {
   Category,
   CATEGORY_COLORS,
@@ -21,17 +23,16 @@ import {
 } from "@/lib/constants";
 import { loadDayReport, saveDayReport, DayReport } from "@/lib/storage";
 
-export default function ReportDayPage({
-  params,
-}: {
-  params: { day: string };
-}) {
+function ReportContent({ dayParam }: { dayParam: string }) {
   const { user } = useAuth();
-  const dayOfWeek = Math.max(0, Math.min(5, parseInt(params.day, 10) || 0));
+  const weekStart = useWeekFromURL();
+  const searchParams = useSearchParams();
+  const weekQ = searchParams.get("week") ? `?week=${searchParams.get("week")}` : "";
+
+  const dayOfWeek = Math.max(0, Math.min(5, parseInt(dayParam, 10) || 0));
   const isFriday = dayOfWeek === 5;
   const dayHours = isFriday ? FRIDAY_HOURS : HOURS;
 
-  const [weekStart] = useState<Date>(getCurrentWeekStart);
   const [hasChanges, setHasChanges] = useState(false);
   const [saved, setSaved] = useState(false);
 
@@ -199,7 +200,6 @@ export default function ReportDayPage({
   };
 
   return (
-    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
@@ -211,17 +211,20 @@ export default function ReportDayPage({
               {" "}&middot; לחיצה = צבע, דאבל-קליק = כתיבה
             </p>
           </div>
-          <button
-            onClick={handleSave}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-2xl text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium",
-              saved ? "bg-green-500" : hasChanges ? "bg-primary" : "bg-gray-300 cursor-default"
-            )}
-            disabled={!hasChanges && !saved}
-          >
-            {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {saved ? "נשמר!" : "שמור דיווח"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-2xl text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium",
+                saved ? "bg-green-500" : hasChanges ? "bg-primary" : "bg-gray-300 cursor-default"
+              )}
+              disabled={!hasChanges && !saved}
+            >
+              {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {saved ? "נשמר!" : "שמור דיווח"}
+            </button>
+            <WeekNavigator weekStart={weekStart} />
+          </div>
         </header>
 
         {/* Day Tabs */}
@@ -229,7 +232,7 @@ export default function ReportDayPage({
           {WEEKDAYS.map((d) => (
             <Link
               key={d}
-              href={`/report/${d}`}
+              href={`/report/${d}${weekQ}`}
               className={cn(
                 "px-4 py-2 rounded-2xl text-sm font-medium transition-apple min-h-[44px] flex items-center",
                 d === dayOfWeek
@@ -374,6 +377,23 @@ export default function ReportDayPage({
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function ReportDayPage({
+  params,
+}: {
+  params: { day: string };
+}) {
+  return (
+    <AuthGuard>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
+        </div>
+      }>
+        <ReportContent dayParam={params.day} />
+      </Suspense>
     </AuthGuard>
   );
 }

@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
-import { formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
+import { formatWeekRange } from "@/lib/date-utils";
+import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
 import {
   Category,
   CATEGORY_COLORS,
@@ -33,9 +34,9 @@ type SummaryRow = {
   diffPercent: number;
 };
 
-export default function SummaryPage() {
+function SummaryContent() {
   const { user } = useAuth();
-  const [weekStart] = useState<Date>(getCurrentWeekStart);
+  const weekStart = useWeekFromURL();
   const [summaryData, setSummaryData] = useState<SummaryRow[]>([]);
 
   const weekRange = formatWeekRange(weekStart);
@@ -59,7 +60,6 @@ export default function SummaryPage() {
     const allPlanned = { ...plannedFromGrid };
     for (const [cat, hours] of Object.entries(weekSummary.planned)) {
       if (cat !== "EMPTY") {
-        // If no grid data, use report planned; if grid data exists, prefer grid
         if (!allPlanned[cat]) {
           allPlanned[cat] = hours;
         }
@@ -86,12 +86,14 @@ export default function SummaryPage() {
   const isEmpty = summaryData.length === 0;
 
   return (
-    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-4xl mx-auto animate-fade-in">
-        <header className="mb-8">
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">סיכום שבועי</h1>
-          <p className="text-muted-foreground mt-1">שבוע {weekRange}</p>
+        <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-bold tracking-tight">סיכום שבועי</h1>
+            <p className="text-muted-foreground mt-1">שבוע {weekRange}</p>
+          </div>
+          <WeekNavigator weekStart={weekStart} />
         </header>
 
         {isEmpty ? (
@@ -224,6 +226,19 @@ export default function SummaryPage() {
         )}
       </div>
     </AppShell>
+  );
+}
+
+export default function SummaryPage() {
+  return (
+    <AuthGuard>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
+        </div>
+      }>
+        <SummaryContent />
+      </Suspense>
     </AuthGuard>
   );
 }

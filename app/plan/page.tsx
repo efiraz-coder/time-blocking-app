@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useRef, useEffect, Suspense } from "react";
 import {
   User,
   Home,
@@ -17,7 +17,8 @@ import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
-import { formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
+import { formatWeekRange } from "@/lib/date-utils";
+import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
 import {
   Category,
   CATEGORY_COLORS,
@@ -41,9 +42,9 @@ const ICON_MAP: Record<Category, React.ComponentType<{ className?: string }>> = 
   EMPTY: Eraser,
 };
 
-export default function PlanPage() {
+function PlanContent() {
   const { user } = useAuth();
-  const [weekStart] = useState<Date>(getCurrentWeekStart);
+  const weekStart = useWeekFromURL();
   const [selectedCategory, setSelectedCategory] = useState<Category>("PAID_WORK");
   const [grid, setGrid] = useState<WeekGrid>({});
   const [notes, setNotes] = useState<WeekNotes>({});
@@ -55,7 +56,7 @@ export default function PlanPage() {
 
   const weekRange = formatWeekRange(weekStart);
 
-  // Load data from localStorage on mount
+  // Load data from localStorage on mount or when week changes
   useEffect(() => {
     if (!user) return;
     const { grid: savedGrid, notes: savedNotes } = loadWeekPlan(user, weekStart);
@@ -70,6 +71,8 @@ export default function PlanPage() {
     });
     setGrid(initialGrid);
     setNotes(savedNotes);
+    setHasChanges(false);
+    setSaved(false);
   }, [user, weekStart]);
 
   useEffect(() => {
@@ -161,7 +164,6 @@ export default function PlanPage() {
   const totalHours = summary.reduce((sum, s) => sum + s.hours, 0);
 
   return (
-    <AuthGuard>
     <AppShell>
       <div
         className="p-6 md:p-10 max-w-6xl mx-auto animate-fade-in"
@@ -175,17 +177,20 @@ export default function PlanPage() {
               שבוע {weekRange} &middot; לחיצה = צבע, דאבל-קליק = כתיבה
             </p>
           </div>
-          <button
-            onClick={handleSave}
-            className={cn(
-              "flex items-center gap-2 px-4 py-2 rounded-2xl text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium",
-              saved ? "bg-green-500" : hasChanges ? "bg-primary" : "bg-gray-300 cursor-default"
-            )}
-            disabled={!hasChanges && !saved}
-          >
-            {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
-            {saved ? "נשמר!" : "שמור תכנון"}
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handleSave}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-2xl text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium",
+                saved ? "bg-green-500" : hasChanges ? "bg-primary" : "bg-gray-300 cursor-default"
+              )}
+              disabled={!hasChanges && !saved}
+            >
+              {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+              {saved ? "נשמר!" : "שמור תכנון"}
+            </button>
+            <WeekNavigator weekStart={weekStart} />
+          </div>
         </header>
 
         <div className="flex gap-6 flex-col xl:flex-row">
@@ -391,6 +396,19 @@ export default function PlanPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function PlanPage() {
+  return (
+    <AuthGuard>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
+        </div>
+      }>
+        <PlanContent />
+      </Suspense>
     </AuthGuard>
   );
 }

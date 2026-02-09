@@ -1,10 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import Link from "next/link";
 import {
-  ChevronRight,
-  ChevronLeft,
   Copy,
   BarChart3,
   Bell,
@@ -21,18 +19,24 @@ import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
 import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
-import { addWeeks, formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
+import { formatWeekRange } from "@/lib/date-utils";
+import WeekNavigator, { useWeekFromURL } from "@/components/WeekNavigator";
 import { getWeekSummary, loadWeekPlan, copyFromPreviousWeek, saveWeekPlan, getAllWeeks } from "@/lib/storage";
 
-export default function DashboardPage() {
+function toDateStr(d: Date): string {
+  return d.toISOString().split("T")[0];
+}
+
+function DashboardContent() {
   const { user } = useAuth();
-  const [weekStart, setWeekStart] = useState<Date>(getCurrentWeekStart);
+  const weekStart = useWeekFromURL();
   const [reportedDays, setReportedDays] = useState(0);
   const [hasPlan, setHasPlan] = useState(false);
   const [weekCount, setWeekCount] = useState(0);
   const totalDays = 6; // א-ו
   const weekRange = formatWeekRange(weekStart);
   const progressPercent = (reportedDays / totalDays) * 100;
+  const weekParam = toDateStr(weekStart);
 
   // Load real data from localStorage
   useEffect(() => {
@@ -48,8 +52,6 @@ export default function DashboardPage() {
     setWeekCount(allWeeks.length);
   }, [user, weekStart]);
 
-  const resetToCurrentWeek = () => setWeekStart(getCurrentWeekStart());
-
   const handleCopyFromLastWeek = useCallback(() => {
     if (!user) return;
     const prev = copyFromPreviousWeek(user, weekStart);
@@ -62,10 +64,13 @@ export default function DashboardPage() {
     }
   }, [user, weekStart]);
 
+  // Build links with week param
+  const weekQ = `?week=${weekParam}`;
+
   const cards = [
     {
       title: "תכנון שבועי (א-ו)",
-      href: "/plan",
+      href: `/plan${weekQ}`,
       icon: Calendar,
       status: hasPlan ? "ready" as const : null,
       statusText: hasPlan ? "מוכן ✓" : "",
@@ -74,7 +79,7 @@ export default function DashboardPage() {
     },
     {
       title: "דיווח יומי",
-      href: "/report/0",
+      href: `/report/0${weekQ}`,
       icon: FileText,
       status: reportedDays > 0 ? (reportedDays >= totalDays ? "ready" as const : "missing" as const) : null,
       statusText: reportedDays > 0 ? (reportedDays >= totalDays ? "הושלם ✓" : `חסר ${totalDays - reportedDays} ימים ⏳`) : "",
@@ -83,7 +88,7 @@ export default function DashboardPage() {
     },
     {
       title: "סיכום שבועי",
-      href: "/summary",
+      href: `/summary${weekQ}`,
       icon: PieChart,
       status: (hasPlan || reportedDays > 0) ? "ready" as const : null,
       statusText: (hasPlan || reportedDays > 0) ? "מוכן ✓" : "",
@@ -111,7 +116,6 @@ export default function DashboardPage() {
   ];
 
   return (
-    <AuthGuard>
     <AppShell>
       <div className="p-6 md:p-10 max-w-5xl mx-auto animate-fade-in">
         {/* Header */}
@@ -122,28 +126,7 @@ export default function DashboardPage() {
             </h1>
             <p className="text-muted-foreground mt-1">שבוע {weekRange}</p>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setWeekStart((w) => addWeeks(w, -1))}
-              className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-2xl bg-white shadow-apple hover:shadow-apple-hover transition-apple text-muted-foreground hover:text-foreground"
-              aria-label="שבוע קודם"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-            <button
-              onClick={resetToCurrentWeek}
-              className="text-sm font-medium px-3 py-1.5 rounded-full bg-white shadow-apple hover:shadow-apple-hover transition-apple cursor-pointer"
-            >
-              שבוע נוכחי
-            </button>
-            <button
-              onClick={() => setWeekStart((w) => addWeeks(w, 1))}
-              className="p-3 min-h-[44px] min-w-[44px] flex items-center justify-center rounded-2xl bg-white shadow-apple hover:shadow-apple-hover transition-apple text-muted-foreground hover:text-foreground"
-              aria-label="שבוע הבא"
-            >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          </div>
+          <WeekNavigator weekStart={weekStart} />
         </header>
 
         {/* Progress Bar */}
@@ -193,7 +176,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Main Green CTA Card */}
-        <Link href="/plan" className="block mb-8 group">
+        <Link href={`/plan${weekQ}`} className="block mb-8 group">
           <div className="relative h-[150px] md:h-[200px] rounded-3xl bg-gradient-to-br from-green-400 via-emerald-400 to-teal-500 shadow-apple-lg hover:shadow-apple-hover transition-apple overflow-hidden flex items-center justify-center cursor-pointer group-hover:scale-[1.01] duration-300">
             <div className="absolute -top-10 -left-10 w-40 h-40 rounded-full bg-white/10" />
             <div className="absolute -bottom-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
@@ -289,6 +272,19 @@ export default function DashboardPage() {
         </div>
       </div>
     </AppShell>
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <AuthGuard>
+      <Suspense fallback={
+        <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
+          <div className="animate-spin h-8 w-8 border-4 border-gray-200 border-t-purple-500 rounded-full" />
+        </div>
+      }>
+        <DashboardContent />
+      </Suspense>
     </AuthGuard>
   );
 }
