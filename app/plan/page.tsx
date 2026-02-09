@@ -11,9 +11,11 @@ import {
   Eraser,
   Pencil,
   Save,
+  Check,
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
 import {
@@ -24,8 +26,10 @@ import {
   ALL_CATEGORIES,
   DAY_LABELS,
   HOURS,
+  FRIDAY_HOURS,
   WEEKDAYS,
 } from "@/lib/constants";
+import { loadWeekPlan, saveWeekPlan, WeekGrid, WeekNotes } from "@/lib/storage";
 
 const ICON_MAP: Record<Category, React.ComponentType<{ className?: string }>> = {
   PERSONAL: User,
@@ -37,28 +41,36 @@ const ICON_MAP: Record<Category, React.ComponentType<{ className?: string }>> = 
   EMPTY: Eraser,
 };
 
-type GridState = Record<string, Category>;
-type NotesState = Record<string, string>;
-
 export default function PlanPage() {
+  const { user } = useAuth();
   const [weekStart] = useState<Date>(getCurrentWeekStart);
   const [selectedCategory, setSelectedCategory] = useState<Category>("PAID_WORK");
-  const [grid, setGrid] = useState<GridState>(() => {
-    const state: GridState = {};
-    WEEKDAYS.forEach((day) => {
-      HOURS.forEach((hour) => {
-        state[`${day}-${hour}`] = "EMPTY";
-      });
-    });
-    return state;
-  });
-  const [notes, setNotes] = useState<NotesState>({});
+  const [grid, setGrid] = useState<WeekGrid>({});
+  const [notes, setNotes] = useState<WeekNotes>({});
   const [editingCell, setEditingCell] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saved, setSaved] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const weekRange = formatWeekRange(weekStart);
+
+  // Load data from localStorage on mount
+  useEffect(() => {
+    if (!user) return;
+    const { grid: savedGrid, notes: savedNotes } = loadWeekPlan(user, weekStart);
+
+    // Build initial grid with EMPTY defaults
+    const initialGrid: WeekGrid = {};
+    WEEKDAYS.forEach((day) => {
+      const hours = day === 5 ? FRIDAY_HOURS : HOURS;
+      hours.forEach((hour) => {
+        initialGrid[`${day}-${hour}`] = savedGrid[`${day}-${hour}`] ?? "EMPTY";
+      });
+    });
+    setGrid(initialGrid);
+    setNotes(savedNotes);
+  }, [user, weekStart]);
 
   useEffect(() => {
     if (editingCell && inputRef.current) {
@@ -78,6 +90,14 @@ export default function PlanPage() {
     window.addEventListener("beforeunload", handler);
     return () => window.removeEventListener("beforeunload", handler);
   }, [hasChanges]);
+
+  const handleSave = useCallback(() => {
+    if (!user) return;
+    saveWeekPlan(user, weekStart, grid, notes);
+    setHasChanges(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }, [user, weekStart, grid, notes]);
 
   const handleCellClick = useCallback(
     (day: number, hour: number) => {
@@ -155,15 +175,17 @@ export default function PlanPage() {
               שבוע {weekRange} &middot; לחיצה = צבע, דאבל-קליק = כתיבה
             </p>
           </div>
-          {hasChanges && (
-            <button
-              onClick={() => { setHasChanges(false); alert("נשמר! (כרגע מקומי בלבד)"); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-primary text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium"
-            >
-              <Save className="w-4 h-4" />
-              שמור תכנון
-            </button>
-          )}
+          <button
+            onClick={handleSave}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-2xl text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium",
+              saved ? "bg-green-500" : hasChanges ? "bg-primary" : "bg-gray-300 cursor-default"
+            )}
+            disabled={!hasChanges && !saved}
+          >
+            {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+            {saved ? "נשמר!" : "שמור תכנון"}
+          </button>
         </header>
 
         <div className="flex gap-6 flex-col xl:flex-row">
@@ -261,12 +283,21 @@ export default function PlanPage() {
           <div className="flex-1 order-1 xl:order-2">
             <div className="rounded-3xl bg-white shadow-apple overflow-hidden select-none">
               <div className="overflow-x-auto">
-                <table className="w-full border-collapse min-w-[500px]">
+                <table className="w-full border-collapse min-w-[600px]">
                   <thead>
                     <tr>
                       <th className="p-3 w-20 text-xs font-semibold text-muted-foreground bg-accent/50" />
                       {DAY_LABELS.map((label, i) => (
-                        <th key={i} className="p-3 text-sm font-bold text-foreground/80 bg-accent/50">{label}</th>
+                        <th
+                          key={i}
+                          className={cn(
+                            "p-3 text-sm font-bold bg-accent/50",
+                            i === 5 ? "text-orange-500" : "text-foreground/80"
+                          )}
+                        >
+                          {label}
+                          {i === 5 && <span className="block text-[10px] font-normal text-orange-400">עד 14:00</span>}
+                        </th>
                       ))}
                     </tr>
                   </thead>
@@ -277,6 +308,15 @@ export default function PlanPage() {
                           {String(hour).padStart(2, "0")}:00
                         </td>
                         {WEEKDAYS.map((day) => {
+                          // Friday only until 14:00 (hours 6-13)
+                          if (day === 5 && hour >= 14) {
+                            return (
+                              <td key={`${day}-${hour}`} className="p-0.5">
+                                <div className="w-full h-10 rounded-xl bg-gray-100/50" />
+                              </td>
+                            );
+                          }
+
                           const key = `${day}-${hour}`;
                           const cat = getCellCategory(day, hour);
                           const note = getCellNote(day, hour);

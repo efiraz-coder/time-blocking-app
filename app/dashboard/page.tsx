@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   ChevronRight,
@@ -19,25 +19,56 @@ import {
 } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { addWeeks, formatWeekRange, getCurrentWeekStart } from "@/lib/date-utils";
+import { getWeekSummary, loadWeekPlan, copyFromPreviousWeek, saveWeekPlan, getAllWeeks } from "@/lib/storage";
 
 export default function DashboardPage() {
+  const { user } = useAuth();
   const [weekStart, setWeekStart] = useState<Date>(getCurrentWeekStart);
-  const [reportedDays] = useState(0);
-  const totalDays = 5;
+  const [reportedDays, setReportedDays] = useState(0);
+  const [hasPlan, setHasPlan] = useState(false);
+  const [weekCount, setWeekCount] = useState(0);
+  const totalDays = 6; // א-ו
   const weekRange = formatWeekRange(weekStart);
   const progressPercent = (reportedDays / totalDays) * 100;
 
+  // Load real data from localStorage
+  useEffect(() => {
+    if (!user) return;
+    const summary = getWeekSummary(user, weekStart);
+    setReportedDays(summary.reportedDays);
+
+    const { grid } = loadWeekPlan(user, weekStart);
+    const hasGridData = Object.values(grid).some((c) => c && c !== "EMPTY");
+    setHasPlan(hasGridData);
+
+    const allWeeks = getAllWeeks(user);
+    setWeekCount(allWeeks.length);
+  }, [user, weekStart]);
+
   const resetToCurrentWeek = () => setWeekStart(getCurrentWeekStart());
+
+  const handleCopyFromLastWeek = useCallback(() => {
+    if (!user) return;
+    const prev = copyFromPreviousWeek(user, weekStart);
+    if (prev) {
+      saveWeekPlan(user, weekStart, prev.grid, prev.notes);
+      setHasPlan(true);
+      alert("הועתק בהצלחה מהשבוע הקודם!");
+    } else {
+      alert("לא נמצא תכנון בשבוע הקודם");
+    }
+  }, [user, weekStart]);
 
   const cards = [
     {
-      title: "תכנון שבועי (א-ה)",
+      title: "תכנון שבועי (א-ו)",
       href: "/plan",
       icon: Calendar,
-      status: null,
-      statusText: "",
+      status: hasPlan ? "ready" as const : null,
+      statusText: hasPlan ? "מוכן ✓" : "",
       gradient: "from-blue-50 to-indigo-50",
       iconColor: "text-blue-500",
     },
@@ -45,8 +76,8 @@ export default function DashboardPage() {
       title: "דיווח יומי",
       href: "/report/0",
       icon: FileText,
-      status: null,
-      statusText: "",
+      status: reportedDays > 0 ? (reportedDays >= totalDays ? "ready" as const : "missing" as const) : null,
+      statusText: reportedDays > 0 ? (reportedDays >= totalDays ? "הושלם ✓" : `חסר ${totalDays - reportedDays} ימים ⏳`) : "",
       gradient: "from-amber-50 to-orange-50",
       iconColor: "text-amber-500",
     },
@@ -54,8 +85,8 @@ export default function DashboardPage() {
       title: "סיכום שבועי",
       href: "/summary",
       icon: PieChart,
-      status: null,
-      statusText: "",
+      status: (hasPlan || reportedDays > 0) ? "ready" as const : null,
+      statusText: (hasPlan || reportedDays > 0) ? "מוכן ✓" : "",
       gradient: "from-emerald-50 to-teal-50",
       iconColor: "text-emerald-500",
     },
@@ -63,8 +94,8 @@ export default function DashboardPage() {
       title: "היסטוריה שבועית",
       href: "/history",
       icon: History,
-      status: null,
-      statusText: "",
+      status: weekCount > 0 ? "partial" as const : null,
+      statusText: weekCount > 0 ? `${weekCount} שבועות` : "",
       gradient: "from-purple-50 to-violet-50",
       iconColor: "text-purple-500",
     },
@@ -128,9 +159,13 @@ export default function DashboardPage() {
               <span className="text-xs font-semibold px-3 py-1 rounded-full bg-green-100 text-green-700">
                 הושלם ✓
               </span>
-            ) : (
+            ) : reportedDays > 0 ? (
               <span className="text-xs font-semibold px-3 py-1 rounded-full bg-amber-100 text-amber-700">
                 בתהליך ⏳
+              </span>
+            ) : (
+              <span className="text-xs font-semibold px-3 py-1 rounded-full bg-gray-100 text-gray-500">
+                טרם התחיל
               </span>
             )}
           </div>
@@ -141,7 +176,7 @@ export default function DashboardPage() {
             />
           </div>
           <div className="flex justify-between mt-2">
-            {[...Array(totalDays)].map((_, i) => (
+            {["א'", "ב'", "ג'", "ד'", "ה'", "ו'"].map((label, i) => (
               <div key={i} className="flex flex-col items-center">
                 <div
                   className={cn(
@@ -150,7 +185,7 @@ export default function DashboardPage() {
                   )}
                 />
                 <span className="text-[10px] text-muted-foreground mt-0.5">
-                  {["א'", "ב'", "ג'", "ד'", "ה'"][i]}
+                  {label}
                 </span>
               </div>
             ))}
@@ -166,9 +201,11 @@ export default function DashboardPage() {
             <div className="relative z-10 text-center">
               <Sparkles className="w-10 h-10 text-white/80 mx-auto mb-3 animate-pulse" />
               <span className="text-2xl md:text-3xl font-bold text-white drop-shadow-sm">
-                התחל תכנון שבוע חדש 👉
+                {hasPlan ? "ערוך תכנון שבועי" : "התחל תכנון שבוע חדש 👉"}
               </span>
-              <p className="text-white/80 text-sm mt-2">לחץ כדי להתחיל לתכנן את השבוע שלך</p>
+              <p className="text-white/80 text-sm mt-2">
+                {hasPlan ? "לחץ כדי לערוך את התכנון הקיים" : "לחץ כדי להתחיל לתכנן את השבוע שלך"}
+              </p>
             </div>
           </div>
         </Link>
@@ -230,7 +267,7 @@ export default function DashboardPage() {
           </h3>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
             {[
-              { icon: Copy, label: "העתק משבוע שעבר", color: "text-blue-500 bg-blue-50", onClick: () => alert("בקרוב!") },
+              { icon: Copy, label: "העתק משבוע שעבר", color: "text-blue-500 bg-blue-50", onClick: handleCopyFromLastWeek },
               { icon: BarChart3, label: "מלא לפי ממוצע", color: "text-emerald-500 bg-emerald-50", onClick: () => alert("בקרוב!") },
               { icon: Bell, label: "תזכורת דיווח", color: "text-amber-500 bg-amber-50", onClick: () => alert("בקרוב!") },
               { icon: FileSpreadsheet, label: "ייצוא Excel", color: "text-purple-500 bg-purple-50", onClick: () => alert("בקרוב!") },

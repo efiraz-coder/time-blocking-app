@@ -10,12 +10,12 @@ export function getWeekStart(date: Date): Date {
 }
 
 /**
- * Get end of the Hebrew work week (Thursday) for any given date.
+ * Get end of the Hebrew work week (Friday) for any given date.
  */
 export function getWeekEnd(date: Date): Date {
   const start = getWeekStart(date);
   const end = new Date(start);
-  end.setDate(end.getDate() + 4); // Sunday + 4 = Thursday
+  end.setDate(end.getDate() + 5); // Sunday + 5 = Friday
   return end;
 }
 

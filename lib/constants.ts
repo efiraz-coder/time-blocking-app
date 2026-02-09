@@ -47,8 +47,9 @@ export const CATEGORY_ICONS: Record<Category, string> = {
   EMPTY: "X",
 };
 
-export const DAY_LABELS = ["א'", "ב'", "ג'", "ד'", "ה'"];
-export const DAY_FULL_LABELS = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי"];
+export const DAY_LABELS = ["א'", "ב'", "ג'", "ד'", "ה'", "ו'"];
+export const DAY_FULL_LABELS = ["יום ראשון", "יום שני", "יום שלישי", "יום רביעי", "יום חמישי", "יום שישי"];
 export const HOURS = Array.from({ length: 18 }, (_, i) => i + 6); // 6-23 (06:00 עד 24:00)
-export const WEEKDAYS = [0, 1, 2, 3, 4];
+export const FRIDAY_HOURS = Array.from({ length: 8 }, (_, i) => i + 6); // 6-13 (06:00 עד 14:00)
+export const WEEKDAYS = [0, 1, 2, 3, 4, 5]; // Sunday(0) through Friday(5)
 export const ALL_CATEGORIES: Category[] = ["PERSONAL", "FAMILY", "HOUSEHOLD", "RELATIONSHIP", "PAID_WORK", "UNPAID_WORK"];

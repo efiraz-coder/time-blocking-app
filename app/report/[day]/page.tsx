@@ -2,9 +2,10 @@
 
 import { useState, useCallback, useRef, useEffect } from "react";
 import Link from "next/link";
-import { Eraser, Save } from "lucide-react";
+import { Eraser, Save, Check } from "lucide-react";
 import AppShell from "@/components/AppShell";
 import AuthGuard from "@/components/AuthGuard";
+import { useAuth } from "@/lib/auth-context";
 import { cn } from "@/lib/utils";
 import { getDateForDay, formatDay, getCurrentWeekStart } from "@/lib/date-utils";
 import {
@@ -14,17 +15,25 @@ import {
   CATEGORY_LABELS,
   ALL_CATEGORIES,
   HOURS,
+  FRIDAY_HOURS,
   DAY_LABELS,
+  WEEKDAYS,
 } from "@/lib/constants";
+import { loadDayReport, saveDayReport, DayReport } from "@/lib/storage";
 
 export default function ReportDayPage({
   params,
 }: {
   params: { day: string };
 }) {
-  const dayOfWeek = Math.max(0, Math.min(4, parseInt(params.day, 10) || 0));
+  const { user } = useAuth();
+  const dayOfWeek = Math.max(0, Math.min(5, parseInt(params.day, 10) || 0));
+  const isFriday = dayOfWeek === 5;
+  const dayHours = isFriday ? FRIDAY_HOURS : HOURS;
+
   const [weekStart] = useState<Date>(getCurrentWeekStart);
   const [hasChanges, setHasChanges] = useState(false);
+  const [saved, setSaved] = useState(false);
 
   const dayDate = getDateForDay(weekStart, dayOfWeek);
   const dayLabel = formatDay(dayDate);
@@ -32,19 +41,48 @@ export default function ReportDayPage({
   // Start empty - no example data
   const [planned, setPlanned] = useState<Record<number, Category>>(() => {
     const state: Record<number, Category> = {};
-    HOURS.forEach((h) => (state[h] = "EMPTY"));
+    dayHours.forEach((h) => (state[h] = "EMPTY"));
     return state;
   });
 
   const [actual, setActual] = useState<Record<number, Category>>(() => {
     const state: Record<number, Category> = {};
-    HOURS.forEach((h) => (state[h] = "EMPTY"));
+    dayHours.forEach((h) => (state[h] = "EMPTY"));
     return state;
   });
 
   // Notes for both planned and actual
   const [plannedNotes, setPlannedNotes] = useState<Record<number, string>>({});
   const [actualNotes, setActualNotes] = useState<Record<number, string>>({});
+
+  // Load saved data
+  useEffect(() => {
+    if (!user) return;
+    const report = loadDayReport(user, weekStart, dayOfWeek);
+    if (report) {
+      const pState: Record<number, Category> = {};
+      const aState: Record<number, Category> = {};
+      dayHours.forEach((h) => {
+        pState[h] = report.planned[h] ?? "EMPTY";
+        aState[h] = report.actual[h] ?? "EMPTY";
+      });
+      setPlanned(pState);
+      setActual(aState);
+      setPlannedNotes(report.plannedNotes ?? {});
+      setActualNotes(report.actualNotes ?? {});
+    } else {
+      // Reset to empty when switching days
+      const emptyState: Record<number, Category> = {};
+      dayHours.forEach((h) => (emptyState[h] = "EMPTY"));
+      setPlanned({ ...emptyState });
+      setActual({ ...emptyState });
+      setPlannedNotes({});
+      setActualNotes({});
+    }
+    setHasChanges(false);
+    setSaved(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, weekStart, dayOfWeek]);
 
   // Editing state: "planned-8" or "actual-14"
   const [editingCell, setEditingCell] = useState<string | null>(null);
@@ -59,6 +97,15 @@ export default function ReportDayPage({
       inputRef.current.focus();
     }
   }, [editingCell]);
+
+  const handleSave = useCallback(() => {
+    if (!user) return;
+    const report: DayReport = { planned, actual, plannedNotes, actualNotes };
+    saveDayReport(user, weekStart, dayOfWeek, report);
+    setHasChanges(false);
+    setSaved(true);
+    setTimeout(() => setSaved(false), 2000);
+  }, [user, weekStart, dayOfWeek, planned, actual, plannedNotes, actualNotes]);
 
   const handleCellClick = useCallback(
     (column: "planned" | "actual", hour: number) => {
@@ -158,22 +205,28 @@ export default function ReportDayPage({
         <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl md:text-3xl font-bold tracking-tight">דיווח יומי</h1>
-            <p className="text-muted-foreground mt-1">{dayLabel} &middot; לחיצה = צבע, דאבל-קליק = כתיבה</p>
+            <p className="text-muted-foreground mt-1">
+              {dayLabel}
+              {isFriday && " (עד 14:00)"}
+              {" "}&middot; לחיצה = צבע, דאבל-קליק = כתיבה
+            </p>
           </div>
-          {hasChanges && (
-            <button
-              onClick={() => { setHasChanges(false); alert("נשמר! (כרגע מקומי בלבד)"); }}
-              className="flex items-center gap-2 px-4 py-2 rounded-2xl bg-primary text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium"
-            >
-              <Save className="w-4 h-4" />
-              שמור דיווח
-            </button>
-          )}
+          <button
+            onClick={handleSave}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-2xl text-white shadow-apple hover:shadow-apple-hover transition-apple text-sm font-medium",
+              saved ? "bg-green-500" : hasChanges ? "bg-primary" : "bg-gray-300 cursor-default"
+            )}
+            disabled={!hasChanges && !saved}
+          >
+            {saved ? <Check className="w-4 h-4" /> : <Save className="w-4 h-4" />}
+            {saved ? "נשמר!" : "שמור דיווח"}
+          </button>
         </header>
 
         {/* Day Tabs */}
         <div className="mb-6 flex gap-2 flex-wrap">
-          {[0, 1, 2, 3, 4].map((d) => (
+          {WEEKDAYS.map((d) => (
             <Link
               key={d}
               href={`/report/${d}`}
@@ -181,7 +234,8 @@ export default function ReportDayPage({
                 "px-4 py-2 rounded-2xl text-sm font-medium transition-apple min-h-[44px] flex items-center",
                 d === dayOfWeek
                   ? "bg-primary text-white shadow-apple"
-                  : "bg-white text-muted-foreground shadow-apple hover:shadow-apple-hover hover:text-foreground"
+                  : "bg-white text-muted-foreground shadow-apple hover:shadow-apple-hover hover:text-foreground",
+                d === 5 && d !== dayOfWeek && "text-orange-500"
               )}
             >
               {DAY_LABELS[d]}
@@ -227,7 +281,7 @@ export default function ReportDayPage({
             <span className="text-muted-foreground">ביצוע</span>
           </div>
           <div className="flex items-center gap-2 text-xs text-muted-foreground mr-auto">
-            💡 דאבל-קליק לכתיבה בבלוק
+            דאבל-קליק לכתיבה בבלוק
           </div>
         </div>
 
@@ -250,7 +304,7 @@ export default function ReportDayPage({
                 </div>
               </div>
 
-              {HOURS.map((hour) => {
+              {dayHours.map((hour) => {
                 return (
                   <div key={hour} className="grid grid-cols-[60px_1fr_1fr] border-t border-border/20">
                     <div className="px-3 py-1 text-[11px] text-muted-foreground font-medium flex items-center justify-center bg-accent/20">
